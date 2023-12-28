@@ -87,52 +87,53 @@
     (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
 
     (setq browse-url-browser-function 'browse-url-generic
-          browse-url-generic-program "chromium")
+	  browse-url-generic-program "chromium")
 
     (global-set-key (kbd "C-c c") 'org-capture)
 
-    (setq org-agenda-files (list "~/myorg/orgfiles/gcal.org"
-                                 "~/myorg/orgfiles/soe-cal.org"
-                                 "~/myorg/orgfiles/i.org"
-                                 "~/myorg/orgfiles/schedule.org"))
+    (setq org-agenda-files (list "~/myorg/orgfiles/appointment.org"
+				 "~/myorg/orgfiles/note.org"
+				 "~/myorg/orgfiles/gtd.org"
+				 "~/myorg/orgfiles/idea.org"
+				 "~/myorg/orgfiles/schedule.org"))
     (setq org-capture-templates
-          '(("a" "Appointment" entry (file  "~/myorg/orgfiles/gcal.org" )
-             "* %?\n\n%^T\n\n:PROPERTIES:\n\n:END:\n\n")
-            ("l" "Link" entry (file+headline "~/myorg/orgfiles/links.org" "Links")
-             "* %? %^L %^g \n%T" :prepend t)
-            ("b" "Blog idea" entry (file+headline "~/myorg/orgfiles/i.org" "Blog Topics:")
-             "* %?\n%T" :prepend t)
-            ("t" "To Do Item" entry (file+headline "~/myorg/orgfiles/i.org" "To Do and Notes")
-             "* TODO %?\n%u" :prepend t)
-            ("m" "Mail To Do" entry (file+headline "~/myorg/orgfiles/i.org" "To Do and Notes")
-             "* TODO %a\n %?" :prepend t)
-            ("g" "GMail To Do" entry (file+headline "~/myorg/orgfiles/i.org" "To Do and Notes")
-             "* TODO %^L\n %?" :prepend t)
-            ("n" "Note" entry (file+headline "~/myorg/orgfiles/i.org" "Notes")
-             "* %u %? " :prepend t)
-            ))
-        (defadvice org-capture-finalize 
-          (after delete-capture-frame activate)  
-        "Advise capture-finalize to close the frame"  
-        (if (equal "capture" (frame-parameter nil 'name))  
-            (delete-frame)))
+	  '(("a" "Appointment" entry (file  "~/myorg/orgfiles/appointment.org" )
+	     "* %?\n\n%^T\n\n:PROPERTIES:\n\n:END:\n\n")
+	    ("l" "Link" entry (file+headline "~/myorg/orgfiles/links.org" "Links")
+	     "* %? %^L %^g \n%T" :prepend t)
+	    ("b" "Blog idea" entry (file+headline "~/myorg/orgfiles/idea.org" "Blog Topics:")
+	     "* %?\n%T" :prepend t)
+	    ("t" "To Do Item" entry (file+headline "~/myorg/orgfiles/gtd.org" "To Do and Notes")
+	     "* TODO %?\n%u" :prepend t)
+	    ("m" "Mail To Do" entry (file+headline "~/myorg/orgfiles/gtd.org" "To Do and Notes")
+	     "* TODO %a\n %?" :prepend t)
+	    ("g" "GMail To Do" entry (file+headline "~/myorg/orgfiles/gtd.org" "To Do and Notes")
+	     "* TODO %^L\n %?" :prepend t)
+	    ("n" "Note" entry (file+headline "~/myorg/orgfiles/note.org" "Notes")
+	     "* %u %? " :prepend t)
+	    ))
+	(defadvice org-capture-finalize 
+	  (after delete-capture-frame activate)  
+	"Advise capture-finalize to close the frame"  
+	(if (equal "capture" (frame-parameter nil 'name))  
+	    (delete-frame)))
 
       (defadvice org-capture-destroy 
-          (after delete-capture-frame activate)  
-        "Advise capture-destroy to close the frame"  
-        (if (equal "capture" (frame-parameter nil 'name))  
-            (delete-frame)))  
+	  (after delete-capture-frame activate)  
+	"Advise capture-destroy to close the frame"  
+	(if (equal "capture" (frame-parameter nil 'name))  
+	    (delete-frame)))  
 
       (use-package noflet
-        :ensure t )
+	:ensure t )
       (defun make-capture-frame ()
-        "Create a new frame and run org-capture."
-        (interactive)
-        (make-frame '((name . "capture")))
-        (select-frame-by-name "capture")
-        (delete-other-windows)
-        (noflet ((switch-to-buffer-other-window (buf) (switch-to-buffer buf)))
-          (org-capture)))
+	"Create a new frame and run org-capture."
+	(interactive)
+	(make-frame '((name . "capture")))
+	(select-frame-by-name "capture")
+	(delete-other-windows)
+	(noflet ((switch-to-buffer-other-window (buf) (switch-to-buffer buf)))
+	  (org-capture)))
   ;; (require 'ox-beamer)
   ;; for inserting inactive dates
       (define-key org-mode-map (kbd "C-c >") (lambda () (interactive (org-time-stamp-inactive))))
@@ -227,7 +228,7 @@
   (load-theme 'dracula t)
 
   ;; set font
-  (set-face-attribute 'default nil :height 130)
+  (set-face-attribute 'default nil :height 200)
 #+end_src
 
 
@@ -370,10 +371,10 @@
     :config
     (beacon-mode 1))
 
-  (use-package aggressive-indent
-    :ensure t
-    :config
-    (global-aggressive-indent-mode 1))
+  ;(use-package aggressive-indent
+  ;  :ensure t
+  ;  :config
+  ;  (global-aggressive-indent-mode 1))
 
   ;select more region smartly
   (use-package expand-region
@@ -437,4 +438,481 @@
             ("html" . (ac-source-words-in-buffer ac-source-abbrev))))
     (setq web-mode-enable-auto-closing t))
   (setq web-mode-enable-auto-quoting t) ; this fixes the quote problem I mentioned
+#+end_src
+
+* elfeed
+#+begin_src emacs-lisp
+
+  (setq elfeed-db-directory "~/elfeeddb")
+
+
+  (defun elfeed-mark-all-as-read ()
+    (interactive)
+    (mark-whole-buffer)
+    (elfeed-search-untag-all-unread))
+
+
+  ;;functions to support syncing .elfeed between machines
+  ;;makes sure elfeed reads index from disk before launching
+  (defun bjm/elfeed-load-db-and-open ()
+    "Wrapper to load the elfeed db from disk before opening"
+    (interactive)
+    (elfeed-db-load)
+    (elfeed)
+    (elfeed-search-update--force))
+
+  ;;write to disk when quiting
+  (defun bjm/elfeed-save-db-and-bury ()
+    "Wrapper to save the elfeed db to disk before burying buffer"
+    (interactive)
+    (elfeed-db-save)
+    (quit-window))
+
+
+
+
+  (use-package elfeed
+    :ensure t
+    :bind (:map elfeed-search-mode-map
+  	      ("q" . bjm/elfeed-save-db-and-bury)
+  	      ("Q" . bjm/elfeed-save-db-and-bury)
+  	      ("m" . elfeed-toggle-star)
+  	      ("M" . elfeed-toggle-star)
+  	      ("j" . mz/make-and-run-elfeed-hydra)
+  	      ("J" . mz/make-and-run-elfeed-hydra)
+  	      )
+    :config
+    (defalias 'elfeed-toggle-star
+      (elfeed-expose #'elfeed-search-toggle-all 'star))
+
+    )
+
+  (use-package elfeed-goodies
+    :ensure t
+    :config
+    (elfeed-goodies/setup))
+
+
+  (use-package elfeed-org
+    :ensure t
+    :config
+    (elfeed-org)
+    (setq rmh-elfeed-org-files (list "~/elfeeddb/elfeed.org")))
+
+
+
+
+
+  (defun z/hasCap (s) ""
+         (let ((case-fold-search nil))
+  	 (string-match-p "[[:upper:]]" s)
+  	 ))
+
+
+  (defun z/get-hydra-option-key (s)
+    "returns single upper case letter (converted to lower) or first"
+    (interactive)
+    (let ( (loc (z/hasCap s)))
+      (if loc
+  	(downcase (substring s loc (+ loc 1)))
+        (substring s 0 1)
+        )))
+
+  ;;  (active blogs cs eDucation emacs local misc sports star tech unread webcomics)
+  (defun mz/make-elfeed-cats (tags)
+    "Returns a list of lists. Each one is line for the hydra configuratio in the form
+         (c function hint)"
+    (interactive)
+    (mapcar (lambda (tag)
+  	    (let* (
+  		   (tagstring (symbol-name tag))
+  		   (c (z/get-hydra-option-key tagstring))
+  		   )
+  	      (list c (append '(elfeed-search-set-filter) (list (format "@6-months-ago +%s" tagstring) ))tagstring  )))
+  	  tags))
+
+
+
+
+
+  (defmacro mz/make-elfeed-hydra ()
+    `(defhydra mz/hydra-elfeed ()
+  	     "filter"
+  	     ,@(mz/make-elfeed-cats (elfeed-db-get-all-tags))
+  	     ("*" (elfeed-search-set-filter "@6-months-ago +star") "Starred")
+  	     ("M" elfeed-toggle-star "Mark")
+  	     ("A" (elfeed-search-set-filter "@6-months-ago") "All")
+  	     ("T" (elfeed-search-set-filter "@1-day-ago") "Today")
+  	     ("Q" bjm/elfeed-save-db-and-bury "Quit Elfeed" :color blue)
+  	     ("q" nil "quit" :color blue)
+  	     ))
+
+
+
+
+  (defun mz/make-and-run-elfeed-hydra ()
+    ""
+    (interactive)
+    (mz/make-elfeed-hydra)
+    (mz/hydra-elfeed/body))
+
+
+#+end_src
+
+
+* projectile
+#+begin_src emacs-lisp
+  ;(use-package projectile
+  ;  :ensure t
+  ;  :init
+  ;  (projectile-mode +1)
+  ;  :bind (:map projectile-mode-map
+  ;              ("s-p" . projectile-command-map)
+  ;              ("C-c p" . projectile-command-map)))
+
+
+  (use-package projectile
+    :ensure t
+    :bind ("C-c p" . projectile-command-map)
+    :config
+    (projectile-global-mode)
+    (setq projectile-completion-system 'ivy))
+
+  ;(use-package counsel-projectile
+  ;  :ensure t
+  ;  :config
+  ;  (counsel-projectile-on) q )
+
+#+end_src
+
+
+* dump_jump
+#+begin_src emacs-lisp
+
+  (use-package dumb-jump
+    :bind (("M-g o" . dumb-jump-go-other-window)
+           ("M-g j" . dumb-jump-go)
+           ("M-g x" . dumb-jump-go-prefer-external)
+           ("M-g z" . dumb-jump-go-prefer-external-other-window))
+    :config 
+    ;; (setq dumb-jump-selector 'ivy) ;; (setq dumb-jump-selector 'helm)
+    :init
+    (dumb-jump-mode)
+    :ensure
+    )
+#+end_src
+
+
+* ibuffer
+#+begin_src emacs-lisp
+  (global-set-key (kbd "C-x C-b") 'ibuffer)
+  (setq ibuffer-saved-filter-groups
+        (quote (("default"
+                 ("dired" (mode . dired-mode))
+                 ("org" (name . "^.*org$"))
+                 ("magit" (mode . magit-mode))
+                 ("IRC" (or (mode . circe-channel-mode) (mode . circe-server-mode)))
+                 ("web" (or (mode . web-mode) (mode . js2-mode)))
+                 ("shell" (or (mode . eshell-mode) (mode . shell-mode)))
+                 ("mu4e" (or
+
+                          (mode . mu4e-compose-mode)
+                          (name . "\*mu4e\*")
+                          ))
+                 ("programming" (or
+                                 (mode . clojure-mode)
+                                 (mode . clojurescript-mode)
+                                 (mode . python-mode)
+                                 (mode . c++-mode)))
+                 ("emacs" (or
+                           (name . "^\\*scratch\\*$")
+                           (name . "^\\*Messages\\*$")))
+                 ))))
+  (add-hook 'ibuffer-mode-hook
+            (lambda ()
+              (ibuffer-auto-mode 1)
+              (ibuffer-switch-to-saved-filter-groups "default")))
+
+  ;; don't show these
+                                          ;(add-to-list 'ibuffer-never-show-predicates "zowie")
+  ;; Don't show filter groups if there are no buffers in that group
+  (setq ibuffer-show-empty-filter-groups nil)
+
+  ;; Don't ask for confirmation to delete marked buffers
+  (setq ibuffer-expert t)
+
+#+end_src
+
+* Ace Window for easy window switching
+#+begin_src emacs-lisp
+  (use-package ace-window
+:ensure t
+:init
+(progn
+(setq aw-scope 'global) ;; was frame
+(global-set-key (kbd "C-x O") 'other-frame)
+  (global-set-key [remap other-window] 'ace-window)
+  (custom-set-faces
+   '(aw-leading-char-face
+     ((t (:inherit ace-jump-face-foreground :height 3.0))))) 
+  ))
+#+end_src
+
+
+
+
+
+* treemacs
+#+begin_src emacs-lisp
+    (use-package treemacs
+      :ensure t
+      :defer t
+      :config
+      (progn
+
+	(setq treemacs-follow-after-init          t
+	      treemacs-width                      35
+	      treemacs-indentation                2
+	      treemacs-git-integration            t
+	      treemacs-collapse-dirs              3
+	      treemacs-silent-refresh             nil
+	      treemacs-change-root-without-asking nil
+	      treemacs-sorting                    'alphabetic-desc
+	      treemacs-show-hidden-files          t
+	      treemacs-never-persist              nil
+	      treemacs-is-never-other-window      nil
+	      treemacs-goto-tag-strategy          'refetch-index)
+
+	(treemacs-follow-mode t)
+	(treemacs-filewatch-mode t))
+      :bind
+      (:map global-map
+	    ([f9]        . treemacs-toggle)
+	    ([f10]        . treemacs-projectile-toggle)
+	    ("<C-M-tab>" . treemacs-toggle)
+	    ("M-0"       . treemacs-select-window)
+	    ("C-c 1"     . treemacs-delete-other-windows)
+	  ))
+    (use-package treemacs-projectile
+      :defer t
+      :ensure t
+      :config
+      (setq treemacs-header-function #'treemacs-projectile-create-header)
+  )
+  
+#+end_src
+
+
+* Regex
+#+begin_src emacs-lisp
+  (use-package pcre2el
+  :ensure t
+  :config 
+  (pcre-mode)
+  )
+#+end_src
+
+
+
+* Wgrap
+#+begin_src emacs-lisp
+  (use-package wgrep
+  :ensure t
+  )
+  (use-package wgrep-ag
+  :ensure t
+  )
+  (require 'wgrep-ag)
+#+end_src
+
+* git
+#+begin_src emacs-lisp
+    (use-package magit
+      :ensure t
+      :init
+      (progn
+      (bind-key "C-x g" 'magit-status)
+      ))
+
+  (setq magit-status-margin
+    '(t "%Y-%m-%d %H:%M " magit-log-margin-width t 18))
+      (use-package git-gutter
+      :ensure t
+      :init
+      (global-git-gutter-mode +1))
+
+      (global-set-key (kbd "M-g M-g") 'hydra-git-gutter/body)
+
+
+      (use-package git-timemachine
+      :ensure t
+      )
+    (defhydra hydra-git-gutter (:body-pre (git-gutter-mode 1)
+				:hint nil)
+      "
+    Git gutter:
+      _j_: next hunk        _s_tage hunk     _q_uit
+      _k_: previous hunk    _r_evert hunk    _Q_uit and deactivate git-gutter
+      ^ ^                   _p_opup hunk
+      _h_: first hunk
+      _l_: last hunk        set start _R_evision
+    "
+      ("j" git-gutter:next-hunk)
+      ("k" git-gutter:previous-hunk)
+      ("h" (progn (goto-char (point-min))
+		  (git-gutter:next-hunk 1)))
+      ("l" (progn (goto-char (point-min))
+		  (git-gutter:previous-hunk 1)))
+      ("s" git-gutter:stage-hunk)
+      ("r" git-gutter:revert-hunk)
+      ("p" git-gutter:popup-hunk)
+      ("R" git-gutter:set-start-revision)
+      ("q" nil :color blue)
+      ("Q" (progn (git-gutter-mode -1)
+		  ;; git-gutter-fringe doesn't seem to
+		  ;; clear the markup right away
+		  (sit-for 0.1)
+		  (git-gutter:clear))
+	   :color blue))
+#+end_src
+
+
+* PDF tools
+#+begin_src emacs-lisp
+    (use-package pdf-tools
+    :ensure t)
+   (use-package org-pdftools
+    :ensure t)
+    (use-package org-noter-pdftools
+      :ensure t)
+    (require 'pdf-tools)
+  ;  (require 'org-pdfview)
+   
+    (use-package org-noter
+      :config
+      ;; Your org-noter config ........
+      (require 'org-noter-pdftools))
+
+
+
+
+
+#+end_src
+
+
+* Company
+#+begin_src emacs-lisp
+  (use-package company
+    :ensure t
+    :config
+    (setq company-idle-delay 0)
+    (setq company-minimum-prefix-length 3)
+
+    (global-company-mode t)
+  )
+
+
+  (defun my/python-mode-hook ()
+    (add-to-list 'company-backends 'company-jedi))
+
+  (add-hook 'python-mode-hook 'my/python-mode-hook)
+  (use-package company-jedi
+      :ensure t
+      :config
+      (add-hook 'python-mode-hook 'jedi:setup)
+	 )
+
+  (defun my/python-mode-hook ()
+    (add-to-list 'company-backends 'company-jedi))
+
+  (add-hook 'python-mode-hook 'my/python-mode-hook)
+
+  ;; company box mode
+  ;(use-package company-box
+  ;:ensure t
+  ;  :hook (company-mode . company-box-mode)) 
+
+
+#+end_src
+
+* auto-yasnippet
+#+begin_src emacs-lisp
+  (use-package auto-yasnippet
+  :ensure t)
+#+end_src
+
+
+* git
+#+begin_src emacs-lisp
+    (use-package magit
+      :ensure t
+      :init
+      (progn
+      (bind-key "C-x g" 'magit-status)
+      ))
+
+  (setq magit-status-margin
+    '(t "%Y-%m-%d %H:%M " magit-log-margin-width t 18))
+      (use-package git-gutter
+      :ensure t
+      :init
+      (global-git-gutter-mode +1))
+
+      (global-set-key (kbd "M-g M-g") 'hydra-git-gutter/body)
+
+
+      (use-package git-timemachine
+      :ensure t
+      )
+    (defhydra hydra-git-gutter (:body-pre (git-gutter-mode 1)
+				:hint nil)
+      "
+    Git gutter:
+      _j_: next hunk        _s_tage hunk     _q_uit
+      _k_: previous hunk    _r_evert hunk    _Q_uit and deactivate git-gutter
+      ^ ^                   _p_opup hunk
+      _h_: first hunk
+      _l_: last hunk        set start _R_evision
+    "
+      ("j" git-gutter:next-hunk)
+      ("k" git-gutter:previous-hunk)
+      ("h" (progn (goto-char (point-min))
+		  (git-gutter:next-hunk 1)))
+      ("l" (progn (goto-char (point-min))
+		  (git-gutter:previous-hunk 1)))
+      ("s" git-gutter:stage-hunk)
+      ("r" git-gutter:revert-hunk)
+      ("p" git-gutter:popup-hunk)
+      ("R" git-gutter:set-start-revision)
+      ("q" nil :color blue)
+      ("Q" (progn (git-gutter-mode -1)
+		  ;; git-gutter-fringe doesn't seem to
+		  ;; clear the markup right away
+		  (sit-for 0.1)
+		  (git-gutter:clear))
+	   :color blue))
+
+
+  
+#+end_src
+
+
+* eyebrowse
+#+begin_src emacs-lisp
+  (use-package eyebrowse
+  :ensure t
+  :config 
+  (eyebrowse-mode)
+  )
+  
+#+end_src
+
+* dictionary
+#+begin_src emacs-lisp
+  (use-package dictionary
+    :ensure t
+    )
+
+(use-package synosaurus
+  :ensure t)
 #+end_src
