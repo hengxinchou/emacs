@@ -83,33 +83,37 @@
 * org-mode related
 #+begin_src emacs-lisp
     ;;Org-mode stuff
+     (require 'org-tempo)
+     (use-package org-bullets
+       :ensure t)
     (require 'org-bullets)
     (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+    (add-hook 'org-mode-hook (lambda () (org-num-mode 1)))
 
     (setq browse-url-browser-function 'browse-url-generic
 	  browse-url-generic-program "chromium")
 
     (global-set-key (kbd "C-c c") 'org-capture)
 
-    (setq org-agenda-files (list "~/myorg/orgfiles/appointment.org"
-				 "~/myorg/orgfiles/note.org"
-				 "~/myorg/orgfiles/gtd.org"
-				 "~/myorg/orgfiles/idea.org"
-				 "~/myorg/orgfiles/schedule.org"))
+    (setq org-agenda-files (list "~/myorg/appointment.org"
+				 "~/myorg/note.org"
+				 "~/myorg/gtd.org"
+				 "~/myorg/idea.org"
+				 "~/myorg/schedule.org"))
     (setq org-capture-templates
-	  '(("a" "Appointment" entry (file  "~/myorg/orgfiles/appointment.org" )
+	  '(("a" "Appointment" entry (file  "~/myorg/appointment.org" )
 	     "* %?\n\n%^T\n\n:PROPERTIES:\n\n:END:\n\n")
-	    ("l" "Link" entry (file+headline "~/myorg/orgfiles/links.org" "Links")
+	    ("l" "Link" entry (file+headline "~/myorg/links.org" "Links")
 	     "* %? %^L %^g \n%T" :prepend t)
-	    ("b" "Blog idea" entry (file+headline "~/myorg/orgfiles/idea.org" "Blog Topics:")
+	    ("b" "Blog idea" entry (file+headline "~/myorg/idea.org" "Blog Topics:")
 	     "* %?\n%T" :prepend t)
-	    ("t" "To Do Item" entry (file+headline "~/myorg/orgfiles/gtd.org" "To Do and Notes")
+	    ("t" "To Do Item" entry (file+headline "~/myorg/gtd.org" "To Do and Notes")
 	     "* TODO %?\n%u" :prepend t)
-	    ("m" "Mail To Do" entry (file+headline "~/myorg/orgfiles/gtd.org" "To Do and Notes")
+	    ("m" "Mail To Do" entry (file+headline "~/myorg/gtd.org" "To Do and Notes")
 	     "* TODO %a\n %?" :prepend t)
-	    ("g" "GMail To Do" entry (file+headline "~/myorg/orgfiles/gtd.org" "To Do and Notes")
+	    ("g" "GMail To Do" entry (file+headline "~/myorg/gtd.org" "To Do and Notes")
 	     "* TODO %^L\n %?" :prepend t)
-	    ("n" "Note" entry (file+headline "~/myorg/orgfiles/note.org" "Notes")
+	    ("n" "Note" entry (file+headline "~/myorg/note.org" "Notes")
 	     "* %u %? " :prepend t)
 	    ))
 	(defadvice org-capture-finalize 
@@ -207,6 +211,8 @@
 * evil-mode
 #+begin_src emacs-lisp
   ;;Enable Evil
+  (use-package evil
+   :ensure t)
   (require 'evil)
   ;(evil-mode 1)
   (global-set-key [f8] 'evil-mode)
@@ -225,10 +231,20 @@
 
   ;; set dark theme
   ;;(load-theme 'leudraculaven-dark t)
-  (load-theme 'dracula t)
+  (use-package dracula-theme
+   :ensure t)
+;  (load-theme 'dracula t)
+   (load-theme 'gruvbox-dark-soft t)
+
+  (use-package smart-mode-line
+  :init
+  (setq sml/no-confirm-load-theme t
+        sml/theme 'respectful)
+  (sml/setup))
 
   ;; set font
-  (set-face-attribute 'default nil :height 200)
+;  (set-face-attribute 'default nil :height 160 :font "FiraCode-16")
+  (set-face-attribute 'default nil :font "FiraCode-16")
 #+end_src
 
 
@@ -915,4 +931,27 @@
 
 (use-package synosaurus
   :ensure t)
+#+end_src
+
+* ivy-postframe
+#+begin_src emacs-lisp
+  (use-package ivy-posframe
+    :ensure t)
+  (require 'ivy-posframe)
+  ;; display at `ivy-posframe-style'
+  (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display)))
+  ;; (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-frame-center)))
+  ;; (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-center)))
+  ;; (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-frame-bottom-left)))
+  ;; (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-bottom-left)))
+  ;; (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-frame-top-center)))
+  (ivy-posframe-mode 1)
+#+end_src
+
+* firacode
+#+begin_src emacs-lisp
+(use-package fira-code-mode
+  :ensure t
+  :custom (fira-code-mode-disabled-ligatures '("[]" "x"))  ; ligatures you don't want
+  :hook prog-mode)                                         ; mode to enable fira-code-mode in
 #+end_src
